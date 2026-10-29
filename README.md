@@ -1,35 +1,36 @@
-# Spotipi
+# Jellypi
+
 ### Overview
-This project is to display information on 32x32 led matrix from the Spotify web api.
+Jellypi is a fork of [Spotipi](https://github.com/ryanwa18/spotipi) by ryanwa18. It displays the album artwork of whatever is currently playing on your Jellyfin server on an LED matrix attached to a Raspberry Pi.
+
+### Requirements
+* Raspberry Pi with an Adafruit RGB Matrix Bonnet or HAT. I suggest a Zero W or Zero 2 W due to low cost and ability to use WiFi.
+* A 32x32 or 64x64 LED matrix panel, properly powered
+* A Jellyfin server on your network
+
 ### Getting Started
-* Create a new application within the [Spotify developer dashboard](https://developer.spotify.com/dashboard/applications) <br />
-* Edit the settings of the application within the dashboard.
-    * Set the redirect uri to any local url such as http://127.0.0.1/callback
-* First step is to ssh to your raspberry pi to clone the repository
+* SSH to your Raspberry Pi and clone the repository:
 ```
-git clone  https://github.com/ryanwa18/spotipi.git
+git clone https://github.com/benovard/jellypi.git
+cd jellypi
 ```
-* Next go ahead and change into the directory using 
+* Install the software (installs and enables the jellypi and jellypi-client systemd services):
 ```
-cd spotipi
-```
-* Run the generate token script and enter the prompted spotify credentials using
-```
-bash generate-token.sh
-```
-* This will generate a file named `.cache` which will be used for authentication
-    * A url will show up in the terminal window and you must copy this into your own web broswer
-    * The url will redirect you to another url and you need to copy/paste this in the terminal when prompted.
-   
-* Install the software: <br />
-```
-cd spotipi
 sudo bash setup.sh
 ```
-* Edit settings on the web app: <br />
-```
-navigate to http://<raspberrypi_hostname or ip_address> within a web browser
-```
+* Reboot when prompted.
 
-### Final Product
-![](https://i.redd.it/8s1cxqo5jfk51.jpg)
+### Configure Jellyfin
+* In your Jellyfin dashboard, go to **API Keys** and generate a new key.
+* Navigate to `http://<raspberrypi_hostname or ip_address>` (ex. `http://raspberrypi.local`) in a web browser.
+* Under **Jellyfin Server**, enter your server URL (ex. `http://192.168.0.1:8096`), paste the API key, and optionally set a device filter so only a specific client's playback is displayed (leave blank to show any active session).
+* Play something in Jellyfin — the album art appears on the matrix within a few seconds. When nothing is playing, a default image is shown.
+
+### Troubleshooting
+* **Matrix completely blank, but `systemctl status jellypi` shows active (running):** if your Adafruit HAT/Bonnet does **not** have the PWM jumper soldered, `hardware_mapping` in `config/rgb_options.ini` must be `adafruit-hat`, not `adafruit-hat-pwm`. The `-pwm` variant leaves the panel's output-enable line undriven, resulting in a perfectly dark panel with no errors. Edit the file, then run `sudo systemctl restart jellypi`.
+* **Default image shows even while music plays:** check the Jellyfin Server settings in the web UI (server URL and API key). If multiple people use your server, set the device filter to your player's device name. Also inspect logs with `journalctl -u jellypi -n 50`.
+* **Matrix goes blank for a couple of seconds after changing a setting in the web UI:** normal — the display service restarts to apply matrix configuration changes.
+* **Everything looks fine but the server can't be reached:** the display loop polls your Jellyfin server once per second with a 5 second timeout, so an unreachable server degrades to the default image rather than a frozen display.
+
+### Credits
+* [Spotipi](https://github.com/ryanwa18/spotipi) by ryanwa18 — the original Spotify-powered version of this project.

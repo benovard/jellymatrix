@@ -7,77 +7,65 @@ echo "Blacklist soundcard..."
 sudo touch /etc/modprobe.d/alsa-blacklist.conf
 sudo echo "blacklist snd_bcm2835" >> /etc/modprobe.d/alsa-blacklist.conf
 
-echo "Installing spotipy library:"
-pip install spotipy==2.23.0
-
 echo "Installing pillow library:"
-pip install pillow==9.3.0
+pip install pillow || pip install --break-system-packages pillow
 
 echo "Installing flask library:"
-pip install flask==3.0.0
+pip install flask || pip install --break-system-packages flask
 
-echo "Enter your Spotify Client ID:"
-read spotify_client_id
-
-echo "Enter your Spotify Client Secret:"
-read spotify_client_secret
-
-echo "Enter your Spotify Redirect URI:"
-read spotify_redirect_uri
-
-echo "Enter your spotify username:"
-read spotify_username
-
-echo "Enter the full path to your spotify token:"
-read spotify_token_path
+echo "Installing requests library:"
+pip install requests || pip install --break-system-packages requests
 
 install_path=$(pwd)
 
-echo "Downloading rgb-matrix software setup:"
-curl https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/master/rgb-matrix.sh >rgb-matrix.sh
+echo "Creating config file if missing:"
+[ -f ./config/rgb_options.ini ] || cp ./config/rgb_options.example.ini ./config/rgb_options.ini
+echo "...done"
 
-sed -n '/REBOOT NOW?/q;p' < rgb-matrix.sh > rgb-matrix-spotipi.sh
+echo "Downloading rgb-matrix software setup:"
+curl https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/main/rgb-matrix.py > rgb-matrix.sh
+
+sed -n '/REBOOT NOW?/q;p' < rgb-matrix.sh > rgb-matrix-jellypi.sh
 
 echo "Running rgb-matrix software setup:"
-sudo bash rgb-matrix-spotipi.sh
+sudo bash rgb-matrix-jellypi.sh
 
 echo "Removing rgb-matrix setup script:"
 sudo rm rgb-matrix.sh
 echo "...done"
 
-echo "Removing spotipi service if it exists:"
-sudo systemctl stop spotipi
-sudo rm -rf /etc/systemd/system/spotipi.*
+echo "Removing legacy spotipi services if they exist:"
+sudo systemctl stop spotipi spotipi-client
+sudo rm -rf /etc/systemd/system/spotipi.* /etc/systemd/system/spotipi-client.*
 sudo systemctl daemon-reload
 echo "...done"
 
-echo "Removing spotipi-client service if it exists:"
-sudo systemctl stop spotipi-client
-sudo rm -rf /etc/systemd/system/spotipi-client.*
+echo "Removing jellypi service if it exists:"
+sudo systemctl stop jellypi
+sudo rm -rf /etc/systemd/system/jellypi.*
 sudo systemctl daemon-reload
 echo "...done"
 
-echo "Creating spotipi service:"
-sudo cp ./config/spotipi.service /etc/systemd/system/
-sudo sed -i -e "/\[Service\]/a ExecStart=python ${install_path}/python/displayCoverArt.py ${spotify_username} ${spotify_token_path} < /dev/zero &> /dev/null &" /etc/systemd/system/spotipi.service
-sudo mkdir /etc/systemd/system/spotipi.service.d
-spotipi_env_path=/etc/systemd/system/spotipi.service.d/spotipi_env.conf
-sudo touch $spotipi_env_path
-sudo echo "[Service]" >> $spotipi_env_path
-sudo echo "Environment=\"SPOTIPY_CLIENT_ID=${spotify_client_id}\"" >> $spotipi_env_path
-sudo echo "Environment=\"SPOTIPY_CLIENT_SECRET=${spotify_client_secret}\"" >> $spotipi_env_path
-sudo echo "Environment=\"SPOTIPY_REDIRECT_URI=${spotify_redirect_uri}\"" >> $spotipi_env_path
+echo "Removing jellypi-client service if it exists:"
+sudo systemctl stop jellypi-client
+sudo rm -rf /etc/systemd/system/jellypi-client.*
 sudo systemctl daemon-reload
-sudo systemctl start spotipi
-sudo systemctl enable spotipi
 echo "...done"
 
-echo "Creating spotipi-client service:"
-sudo cp ./config/spotipi-client.service /etc/systemd/system/
-sudo sed -i -e "/\[Service\]/a ExecStart=python ${install_path}/python/client/app.py &" /etc/systemd/system/spotipi-client.service
+echo "Creating jellypi service:"
+sudo cp ./config/jellypi.service /etc/systemd/system/
+sudo sed -i -e "/\[Service\]/a ExecStart=python3 ${install_path}/python/displayCoverArt.py" /etc/systemd/system/jellypi.service
 sudo systemctl daemon-reload
-sudo systemctl start spotipi-client
-sudo systemctl enable spotipi-client
+sudo systemctl start jellypi
+sudo systemctl enable jellypi
+echo "...done"
+
+echo "Creating jellypi-client service:"
+sudo cp ./config/jellypi-client.service /etc/systemd/system/
+sudo sed -i -e "/\[Service\]/a ExecStart=python3 ${install_path}/python/client/app.py" /etc/systemd/system/jellypi-client.service
+sudo systemctl daemon-reload
+sudo systemctl start jellypi-client
+sudo systemctl enable jellypi-client
 echo "...done"
 
 echo -n "In order to finish setup a reboot is necessary..."

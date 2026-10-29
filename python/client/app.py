@@ -1,8 +1,5 @@
-# app.py
-
-# also importing the request module
 from flask import Flask, render_template, request
-import sys,os
+import os
 import configparser
 import dbus
 
@@ -12,9 +9,22 @@ app.config["CACHE_TYPE"] = "null"
 dir = os.path.dirname(__file__)
 filename = os.path.join(dir, '../../config/rgb_options.ini')
 
-# Configuration for the matrix
-config = configparser.ConfigParser()
-config.read(filename)
+def read_config():
+    config = configparser.ConfigParser()
+    config.read(filename)
+    return config
+
+def render_settings(config):
+    jellyfin = config['jellyfin'] if config.has_section('jellyfin') else {}
+    return render_template('index.html',
+        brightness = int(config['DEFAULT']['brightness']),
+        rows = int(config['DEFAULT']['rows']),
+        columns = int(config['DEFAULT']['columns']),
+        power = config['DEFAULT']['power'],
+        refresh_rate = int(config['DEFAULT']['refresh_rate']),
+        server_url = jellyfin.get('server_url', ''),
+        api_key = jellyfin.get('api_key', ''),
+        device = jellyfin.get('device', ''))
 
 sysbus = dbus.SystemBus()
 systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
@@ -23,64 +33,64 @@ manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
 # home route
 @app.route("/")
 def saved_config():
-    # Brightness from config file
-    brightness = int(config['DEFAULT']['brightness'])
-    width = int(config['DEFAULT']['rows'])
-    height = int(config['DEFAULT']['columns'])
-    power = config['DEFAULT']['power']
-    refresh_rate = config['DEFAULT']['refresh_rate']
-    return render_template('index.html', brightness = brightness, width = width, height = height, power = power, refresh_rate = refresh_rate)
+    return render_settings(read_config())
 
 # handling power status
 @app.route("/power", methods=["GET", "POST"])
 def handle_power():
+    config = read_config()
     power = request.form['power']
-    brightness = int(config['DEFAULT']['brightness'])
-    width = int(config['DEFAULT']['rows'])
-    height = int(config['DEFAULT']['columns'])
-    config.set('DEFAULT', 'power', request.form['power'])
+    config.set('DEFAULT', 'power', power)
+    with open(filename, 'w') as configfile:
+        config.write(configfile)
     if power == 'on':
-      job = manager.StartUnit('spotipi.service', 'replace')
+      job = manager.StartUnit('jellypi.service', 'replace')
     else:
-      job = manager.StopUnit('spotipi.service', 'replace')
-    return render_template('index.html', brightness = brightness, width = width, height = height, power = power)
+      job = manager.StopUnit('jellypi.service', 'replace')
+    return render_settings(config)
 
 # handling form data
 @app.route('/brightness', methods=['POST'])
 def handle_brightness():
+    config = read_config()
     config.set('DEFAULT', 'brightness', request.form['brightness'])
-    width = int(config['DEFAULT']['rows'])
-    height = int(config['DEFAULT']['columns'])
-    power = config['DEFAULT']['power']
     with open(filename, 'w') as configfile:
         config.write(configfile)
-    job = manager.RestartUnit('spotipi.service', 'fail')
-    return render_template('index.html', brightness = request.form['brightness'], width = width, height = height, power = power)
+    job = manager.RestartUnit('jellypi.service', 'fail')
+    return render_settings(config)
 
 # handling form data
 @app.route('/size', methods=['POST'])
 def handle_size():
-    config.set('DEFAULT', 'rows', request.form['width'])
-    config.set('DEFAULT', 'columns', request.form['height'])
-    brightness = int(config['DEFAULT']['brightness'])
-    power = config['DEFAULT']['power']
+    config = read_config()
+    config.set('DEFAULT', 'rows', request.form['rows'])
+    config.set('DEFAULT', 'columns', request.form['columns'])
     with open(filename, 'w') as configfile:
         config.write(configfile)
-    job = manager.RestartUnit('spotipi.service', 'fail')
-    return render_template('index.html', brightness = brightness, width = int(request.form['width']), height = int(request.form['height']), power = power)
+    job = manager.RestartUnit('jellypi.service', 'fail')
+    return render_settings(config)
 
 # handling form data
 @app.route('/refresh-rate', methods=['POST'])
 def handle_refresh_rate():
+    config = read_config()
     config.set('DEFAULT', 'refresh_rate', request.form['refresh_rate'])
-    brightness = int(config['DEFAULT']['brightness'])
-    power = config['DEFAULT']['power']
-    width = int(config['DEFAULT']['rows'])
-    height = int(config['DEFAULT']['columns'])
     with open(filename, 'w') as configfile:
         config.write(configfile)
-    job = manager.RestartUnit('spotipi.service', 'fail')
-    return render_template('index.html', brightness = brightness, width = width, height = height, refresh_rate = int(request.form['refresh_rate']), power = power)
+    job = manager.RestartUnit('jellypi.service', 'fail')
+    return render_settings(config)
 
-app.run(host='0.0.0.0', port=80) 
+# handling jellyfin settings
+@app.route('/jellyfin', methods=['POST'])
+def handle_jellyfin():
+    config = read_config()
+    if not config.has_section('jellyfin'):
+        config.add_section('jellyfin')
+    config.set('jellyfin', 'server_url', request.form['server_url'])
+    config.set('jellyfin', 'api_key', request.form['api_key'])
+    config.set('jellyfin', 'device', request.form['device'])
+    with open(filename, 'w') as configfile:
+        config.write(configfile)
+    return render_settings(config)
 
+app.run(host='0.0.0.0', port=80)
