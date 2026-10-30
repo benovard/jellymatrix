@@ -44,9 +44,9 @@ def handle_power():
     with open(filename, 'w') as configfile:
         config.write(configfile)
     if power == 'on':
-      job = manager.StartUnit('jellypi.service', 'replace')
+      job = manager.StartUnit('jellymatrix.service', 'replace')
     else:
-      job = manager.StopUnit('jellypi.service', 'replace')
+      job = manager.StopUnit('jellymatrix.service', 'replace')
     return render_settings(config)
 
 # handling form data
@@ -56,7 +56,7 @@ def handle_brightness():
     config.set('DEFAULT', 'brightness', request.form['brightness'])
     with open(filename, 'w') as configfile:
         config.write(configfile)
-    job = manager.RestartUnit('jellypi.service', 'fail')
+    job = manager.RestartUnit('jellymatrix.service', 'fail')
     return render_settings(config)
 
 # handling form data
@@ -67,7 +67,7 @@ def handle_size():
     config.set('DEFAULT', 'columns', request.form['columns'])
     with open(filename, 'w') as configfile:
         config.write(configfile)
-    job = manager.RestartUnit('jellypi.service', 'fail')
+    job = manager.RestartUnit('jellymatrix.service', 'fail')
     return render_settings(config)
 
 # handling form data
@@ -77,7 +77,7 @@ def handle_refresh_rate():
     config.set('DEFAULT', 'refresh_rate', request.form['refresh_rate'])
     with open(filename, 'w') as configfile:
         config.write(configfile)
-    job = manager.RestartUnit('jellypi.service', 'fail')
+    job = manager.RestartUnit('jellymatrix.service', 'fail')
     return render_settings(config)
 
 # handling jellyfin settings

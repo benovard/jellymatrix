@@ -1,8 +1,8 @@
 [Unit]
-Description=Jellypi web service
+Description=Jellymatrix web service
 
 [Service]
-SyslogIdentifier=jellypi-client
+SyslogIdentifier=jellymatrix-client
 Restart=always
 RestartSec=3
 

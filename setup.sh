@@ -25,47 +25,41 @@ echo "...done"
 echo "Downloading rgb-matrix software setup:"
 curl https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/main/rgb-matrix.py > rgb-matrix.sh
 
-sed -n '/REBOOT NOW?/q;p' < rgb-matrix.sh > rgb-matrix-jellypi.sh
+sed -n '/REBOOT NOW?/q;p' < rgb-matrix.sh > rgb-matrix-jellymatrix.sh
 
 echo "Running rgb-matrix software setup:"
-sudo bash rgb-matrix-jellypi.sh
+sudo bash rgb-matrix-jellymatrix.sh
 
 echo "Removing rgb-matrix setup script:"
 sudo rm rgb-matrix.sh
 echo "...done"
 
-echo "Removing legacy spotipi services if they exist:"
-sudo systemctl stop spotipi spotipi-client
-sudo rm -rf /etc/systemd/system/spotipi.* /etc/systemd/system/spotipi-client.*
+echo "Removing jellymatrix service if it exists:"
+sudo systemctl stop jellymatrix
+sudo rm -rf /etc/systemd/system/jellymatrix.*
 sudo systemctl daemon-reload
 echo "...done"
 
-echo "Removing jellypi service if it exists:"
-sudo systemctl stop jellypi
-sudo rm -rf /etc/systemd/system/jellypi.*
+echo "Removing jellymatrix-client service if it exists:"
+sudo systemctl stop jellymatrix-client
+sudo rm -rf /etc/systemd/system/jellymatrix-client.*
 sudo systemctl daemon-reload
 echo "...done"
 
-echo "Removing jellypi-client service if it exists:"
-sudo systemctl stop jellypi-client
-sudo rm -rf /etc/systemd/system/jellypi-client.*
+echo "Creating jellymatrix service:"
+sudo cp ./config/jellymatrix.service /etc/systemd/system/
+sudo sed -i -e "/\[Service\]/a ExecStart=python3 ${install_path}/python/displayCoverArt.py" /etc/systemd/system/jellymatrix.service
 sudo systemctl daemon-reload
+sudo systemctl start jellymatrix
+sudo systemctl enable jellymatrix
 echo "...done"
 
-echo "Creating jellypi service:"
-sudo cp ./config/jellypi.service /etc/systemd/system/
-sudo sed -i -e "/\[Service\]/a ExecStart=python3 ${install_path}/python/displayCoverArt.py" /etc/systemd/system/jellypi.service
+echo "Creating jellymatrix-client service:"
+sudo cp ./config/jellymatrix-client.service /etc/systemd/system/
+sudo sed -i -e "/\[Service\]/a ExecStart=python3 ${install_path}/python/client/app.py" /etc/systemd/system/jellymatrix-client.service
 sudo systemctl daemon-reload
-sudo systemctl start jellypi
-sudo systemctl enable jellypi
-echo "...done"
-
-echo "Creating jellypi-client service:"
-sudo cp ./config/jellypi-client.service /etc/systemd/system/
-sudo sed -i -e "/\[Service\]/a ExecStart=python3 ${install_path}/python/client/app.py" /etc/systemd/system/jellypi-client.service
-sudo systemctl daemon-reload
-sudo systemctl start jellypi-client
-sudo systemctl enable jellypi-client
+sudo systemctl start jellymatrix-client
+sudo systemctl enable jellymatrix-client
 echo "...done"
 
 echo -n "In order to finish setup a reboot is necessary..."

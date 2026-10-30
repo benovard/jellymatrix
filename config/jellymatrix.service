@@ -1,8 +1,8 @@
 [Unit]
-Description=Jellypi led matrix service
+Description=Jellymatrix led matrix service
 
 [Service]
-SyslogIdentifier=jellypi
+SyslogIdentifier=jellymatrix
 LimitRTPRIO=99
 Restart=always
 RestartSec=3
